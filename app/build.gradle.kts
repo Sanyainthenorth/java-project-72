@@ -2,6 +2,7 @@ plugins {
     id("java")
     application
     id("org.sonarqube") version "4.4.1.3373"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "hexlet.code"
@@ -15,7 +16,6 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     implementation("io.javalin:javalin:6.1.3")
-    implementation("io.javalin:javalin-bundle:6.1.3") // Включает сессии
     implementation("org.slf4j:slf4j-simple:2.0.7")
 }
 
@@ -31,5 +31,10 @@ sonar {
         property("sonar.organization", "sanyainthenorth")
         property("sonar.host.url", "https://sonarcloud.io")
     }
+}
+tasks.shadowJar {
+    archiveBaseName.set("app")
+    archiveClassifier.set("")
+    archiveVersion.set("")
 }
 
