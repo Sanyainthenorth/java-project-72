@@ -9,15 +9,20 @@ import hexlet.code.model.Url;
 import hexlet.code.repository.BaseRepository;
 import hexlet.code.repository.UrlRepository;
 import io.javalin.Javalin;
+import io.javalin.http.NotFoundResponse;
 import io.javalin.rendering.template.JavalinJte;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 public class App {
 
@@ -69,18 +74,79 @@ public class App {
         });
 
         app.get("/", ctx -> {
-            ctx.render("index.jte");
+            ctx.render("index.jte", Map.of(
+                "flash", ctx.consumeSessionAttribute("flash"),
+                "flashType", ctx.consumeSessionAttribute("flashType")
+            ));
         });
 
-        app.get("/urls", ctx -> {
-            var urls = UrlRepository.getEntities();
-            ctx.render("urls/index.jte", Map.of("urls", urls));
-        });
-
+        // Обработка добавления URL
         app.post("/urls", ctx -> {
-            var url = new Url(ctx.formParam("url"));
-            UrlRepository.save(url);
-            ctx.redirect("/urls");
+            var inputUrl = ctx.formParam("url");
+            URL parsedUrl;
+
+            try {
+                // Парсим и нормализуем URL
+                var uri = new URI(inputUrl).toURL();
+                parsedUrl = new URL(uri.getProtocol(), uri.getHost(), uri.getPort(), "");
+            } catch (Exception e) {
+                ctx.sessionAttribute("flash", "Некорректный URL");
+                ctx.sessionAttribute("flashType", "danger");
+                ctx.redirect("/");
+                return;
+            }
+
+            var normalizedUrl = parsedUrl.toString();
+
+            try {
+                // Проверяем существование URL
+                var existingUrl = UrlRepository.findByName(normalizedUrl);
+                if (existingUrl.isPresent()) {
+                    ctx.sessionAttribute("flash", "Страница уже существует");
+                    ctx.sessionAttribute("flashType", "info");
+                } else {
+                    var url = new Url(normalizedUrl);
+                    UrlRepository.save(url);
+                    ctx.sessionAttribute("flash", "Страница успешно добавлена");
+                    ctx.sessionAttribute("flashType", "success");
+                }
+                ctx.redirect("/urls");
+            } catch (SQLException e) {
+                ctx.sessionAttribute("flash", "Ошибка при работе с базой данных");
+                ctx.sessionAttribute("flashType", "danger");
+                ctx.redirect("/");
+            }
+        });
+
+        // Список всех URL
+        app.get("/urls", ctx -> {
+            try {
+                var urls = UrlRepository.getEntities();
+                ctx.render("urls/index.jte", Map.of(
+                    "urls", urls,
+                    "flash", ctx.consumeSessionAttribute("flash"),
+                    "flashType", ctx.consumeSessionAttribute("flashType")
+                ));
+            } catch (SQLException e) {
+                ctx.sessionAttribute("flash", "Ошибка при получении списка URL");
+                ctx.sessionAttribute("flashType", "danger");
+                ctx.redirect("/");
+            }
+        });
+
+        // Конкретный URL
+        app.get("/urls/{id}", ctx -> {
+            try {
+                var id = ctx.pathParamAsClass("id", Long.class).get();
+                var url = UrlRepository.find(id)
+                                       .orElseThrow(() -> new NotFoundResponse("URL не найден"));
+
+                ctx.render("urls/show.jte", Map.of("url", url));
+            } catch (SQLException e) {
+                ctx.sessionAttribute("flash", "Ошибка при получении URL");
+                ctx.sessionAttribute("flashType", "danger");
+                ctx.redirect("/urls");
+            }
         });
 
         return app;
