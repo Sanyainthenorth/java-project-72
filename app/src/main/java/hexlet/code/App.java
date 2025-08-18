@@ -18,7 +18,9 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -74,10 +76,24 @@ public class App {
         });
 
         app.get("/", ctx -> {
-            ctx.render("index.jte", Map.of(
-                "flash", ctx.consumeSessionAttribute("flash"),
-                "flashType", ctx.consumeSessionAttribute("flashType")
-            ));
+            try {
+                var model = new HashMap<String, Object>();
+
+                // Безопасное получение flash-сообщений
+                Optional.ofNullable(ctx.sessionAttribute("flash"))
+                        .ifPresent(flash -> model.put("flash", flash));
+                Optional.ofNullable(ctx.sessionAttribute("flashType"))
+                        .ifPresent(type -> model.put("flashType", type));
+
+                // Удаляем атрибуты после чтения
+                ctx.consumeSessionAttribute("flash");
+                ctx.consumeSessionAttribute("flashType");
+
+                ctx.render("index.jte", model);
+            } catch (Exception e) {
+                ctx.status(500).result("Error: " + e.getMessage());
+                throw e;
+            }
         });
 
         // Обработка добавления URL
