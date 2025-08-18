@@ -2,45 +2,79 @@ package hexlet.code;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import gg.jte.ContentType;
+import gg.jte.TemplateEngine;
+import gg.jte.resolve.ResourceCodeResolver;
 import hexlet.code.model.Url;
 import hexlet.code.repository.BaseRepository;
 import hexlet.code.repository.UrlRepository;
 import io.javalin.Javalin;
+import io.javalin.rendering.template.JavalinJte;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class App {
 
+    private static int getPort() {
+        return Integer.parseInt(System.getenv().getOrDefault("PORT", "7070"));
+    }
+
+    private static String getJdbcUrl() {
+        return System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
+    }
+
+    private static String readResourceFile(String fileName) throws IOException {
+        var inputStream = App.class.getClassLoader().getResourceAsStream(fileName);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        }
+    }
+
+    private static TemplateEngine createTemplateEngine() {
+        ClassLoader classLoader = App.class.getClassLoader();
+        ResourceCodeResolver codeResolver = new ResourceCodeResolver("templates", classLoader);
+        return TemplateEngine.create(codeResolver, ContentType.Html);
+    }
+
+    public static void main(String[] args) throws IOException, SQLException {
+        var app = getApp();
+        app.start(getPort());
+    }
+
     public static Javalin getApp() throws IOException, SQLException {
-        // Настройка подключения к БД
         var hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(getJdbcUrl());
         var dataSource = new HikariDataSource(hikariConfig);
-        BaseRepository.dataSource = dataSource;
+        var sql = readResourceFile("schema.sql");
 
-        // Создание таблицы
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.createStatement()) {
-            stmt.execute(getSchema());
+        try (var connection = dataSource.getConnection();
+             var statement = connection.createStatement()) {
+            statement.execute(sql);
         }
+        BaseRepository.dataSource = dataSource;
 
         var app = Javalin.create(config -> {
             config.bundledPlugins.enableDevLogging();
+            config.fileRenderer(new JavalinJte(createTemplateEngine()));
         });
 
-        app.before(ctx -> ctx.contentType("text/html; charset=utf-8"));
+        app.before(ctx -> {
+            ctx.contentType("text/html; charset=utf-8");
+        });
 
-        // Маршруты
-        app.get("/", ctx -> ctx.result("Hello World"));
+        app.get("/", ctx -> {
+            ctx.render("index.jte");
+        });
 
         app.get("/urls", ctx -> {
             var urls = UrlRepository.getEntities();
-            ctx.json(urls);
+            ctx.render("urls/index.jte", Map.of("urls", urls));
         });
 
         app.post("/urls", ctx -> {
@@ -50,26 +84,5 @@ public class App {
         });
 
         return app;
-    }
-
-    private static String getJdbcUrl() {
-        return System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
-    }
-
-    private static String getSchema() throws IOException {
-        try (var inputStream = App.class.getClassLoader().getResourceAsStream("schema.sql")) {
-            if (inputStream == null) {
-                throw new IOException("schema.sql not found");
-            }
-            return new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
-                .lines()
-                .collect(Collectors.joining("\n"));
-        }
-    }
-
-    public static void main(String[] args) throws IOException, SQLException {
-        var app = getApp();
-        var port = Integer.parseInt(System.getenv().getOrDefault("PORT", "7070"));
-        app.start(port);
     }
 }
