@@ -27,7 +27,7 @@
                 <tr>
                     <td>${url.getId()}</td>
                     <td><a href="/urls/${url.getId()}">${url.getName()}</a></td>
-                    <td>${url.getCreatedAt()}</td>
+                    <td>${url.getCreatedAt().toString()}</td> <!-- Добавьте .toString() -->
                 </tr>
             @endfor
         </tbody>

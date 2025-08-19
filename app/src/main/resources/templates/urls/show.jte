@@ -11,7 +11,7 @@
 <div class="container mt-5">
     <h1>URL: ${url.getName()}</h1>
     <p>ID: ${url.getId()}</p>
-    <p>Дата создания: ${url.getCreatedAt()}</p>
+    <p>Дата создания: ${url.getCreatedAt().toString()}</p> <!-- Добавьте .toString() -->
     <a href="/urls" class="btn btn-primary">Назад к списку</a>
 </div>
 </body>
