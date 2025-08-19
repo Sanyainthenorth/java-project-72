@@ -1,4 +1,6 @@
+@import hexlet.code.model.Url
 @param Url url
+
 
 <!DOCTYPE html>
 <html>
