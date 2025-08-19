@@ -5,6 +5,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.resolve.ResourceCodeResolver;
+import hexlet.code.dto.MainPage;
+import hexlet.code.dto.UrlsPage;
 import hexlet.code.model.Url;
 import hexlet.code.repository.BaseRepository;
 import hexlet.code.repository.UrlRepository;
@@ -18,13 +20,11 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
+
+import static io.javalin.rendering.template.TemplateUtil.model;
 
 public class App {
 
@@ -77,19 +77,14 @@ public class App {
 
         app.get("/", ctx -> {
             try {
-                var model = new HashMap<String, Object>();
+                var page = new MainPage();
+                page.setFlash((String) ctx.sessionAttribute("flash"));
+                page.setFlashType((String) ctx.sessionAttribute("flashType"));
 
-                // Безопасное получение flash-сообщений
-                Optional.ofNullable(ctx.sessionAttribute("flash"))
-                        .ifPresent(flash -> model.put("flash", flash));
-                Optional.ofNullable(ctx.sessionAttribute("flashType"))
-                        .ifPresent(type -> model.put("flashType", type));
-
-                // Удаляем атрибуты после чтения
                 ctx.consumeSessionAttribute("flash");
                 ctx.consumeSessionAttribute("flashType");
 
-                ctx.render("index.jte", model);
+                ctx.render("index.jte", model("page", page));
             } catch (Exception e) {
                 ctx.status(500).result("Error: " + e.getMessage());
                 throw e;
@@ -138,20 +133,14 @@ public class App {
         app.get("/urls", ctx -> {
             try {
                 var urls = UrlRepository.getEntities();
+                var page = new UrlsPage(urls);
+                page.setFlash((String) ctx.sessionAttribute("flash"));
+                page.setFlashType((String) ctx.sessionAttribute("flashType"));
 
-                // Правильное извлечение flash-сообщений
-                var flash = ctx.sessionAttribute("flash");
-                var flashType = ctx.sessionAttribute("flashType");
-
-                // Удаляем атрибуты из сессии после чтения
                 ctx.consumeSessionAttribute("flash");
                 ctx.consumeSessionAttribute("flashType");
 
-                ctx.render("urls/index.jte", Map.of(
-                    "urls", urls,
-                    "flash", flash,
-                    "flashType", flashType
-                ));
+                ctx.render("urls/index.jte", model("page", page));
             } catch (SQLException e) {
                 ctx.sessionAttribute("flash", "Ошибка при получении списка URL");
                 ctx.sessionAttribute("flashType", "danger");
@@ -166,7 +155,7 @@ public class App {
                 var url = UrlRepository.find(id)
                                        .orElseThrow(() -> new NotFoundResponse("URL не найден"));
 
-                ctx.render("urls/show.jte", Map.of("url", url));
+                ctx.render("urls/show.jte", model("url", url));
             } catch (SQLException e) {
                 ctx.sessionAttribute("flash", "Ошибка при получении URL");
                 ctx.sessionAttribute("flashType", "danger");

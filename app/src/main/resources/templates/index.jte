@@ -1,5 +1,4 @@
-@param Object flash
-@param Object flashType
+@param hexlet.code.dto.MainPage page
 
 <!DOCTYPE html>
 <html>
@@ -10,8 +9,8 @@
 </head>
 <body>
 <div class="container mt-5">
-    @if (flash != null)
-        <div class="alert alert-${flashType}">${flash}</div>
+    @if (page.getFlash() != null)
+        <div class="alert alert-${page.getFlashType()}">${page.getFlash()}</div>
     @endif
 
     <h1>Добавить новый URL</h1>

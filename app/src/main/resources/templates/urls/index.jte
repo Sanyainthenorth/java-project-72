@@ -1,6 +1,4 @@
-@param List<Url> urls
-@param Object flash
-@param Object flashType
+@param hexlet.code.dto.UrlsPage page
 
 <!DOCTYPE html>
 <html>
@@ -11,8 +9,8 @@
 </head>
 <body>
 <div class="container mt-5">
-    @if (flash != null)
-        <div class="alert alert-${flashType}">${flash}</div>
+    @if (page.getFlash() != null)
+        <div class="alert alert-${page.getFlashType()}">${page.getFlash()}</div>
     @endif
 
     <h1>Список URL</h1>
@@ -25,7 +23,7 @@
             </tr>
         </thead>
         <tbody>
-            @for (var url : urls)
+            @for (var url : page.getUrls())
                 <tr>
                     <td>${url.getId()}</td>
                     <td><a href="/urls/${url.getId()}">${url.getName()}</a></td>
