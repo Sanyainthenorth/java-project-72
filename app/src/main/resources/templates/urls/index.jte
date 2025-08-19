@@ -1,6 +1,6 @@
 @param List<Url> urls
-@param String flash
-@param String flashType
+@param Object flash
+@param Object flashType
 
 <!DOCTYPE html>
 <html>
@@ -16,7 +16,7 @@
     @endif
 
     <h1>Список URL</h1>
-    <table class="table">
+    <table class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
@@ -25,13 +25,13 @@
             </tr>
         </thead>
         <tbody>
-        @for (Url url : urls)
-            <tr>
-                <td>${url.getId()}</td>
-                <td><a href="/urls/${url.getId()}">${url.getName()}</a></td>
-                <td>${url.getCreatedAt()}</td>
-            </tr>
-        @endfor
+            @for (var url : urls)
+                <tr>
+                    <td>${url.getId()}</td>
+                    <td><a href="/urls/${url.getId()}">${url.getName()}</a></td>
+                    <td>${url.getCreatedAt()}</td>
+                </tr>
+            @endfor
         </tbody>
     </table>
 </div>

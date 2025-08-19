@@ -1,5 +1,5 @@
-@param String flash
-@param String flashType
+@param Object flash
+@param Object flashType
 
 <!DOCTYPE html>
 <html>

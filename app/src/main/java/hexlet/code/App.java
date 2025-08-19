@@ -138,10 +138,19 @@ public class App {
         app.get("/urls", ctx -> {
             try {
                 var urls = UrlRepository.getEntities();
+
+                // Правильное извлечение flash-сообщений
+                var flash = ctx.sessionAttribute("flash");
+                var flashType = ctx.sessionAttribute("flashType");
+
+                // Удаляем атрибуты из сессии после чтения
+                ctx.consumeSessionAttribute("flash");
+                ctx.consumeSessionAttribute("flashType");
+
                 ctx.render("urls/index.jte", Map.of(
                     "urls", urls,
-                    "flash", ctx.consumeSessionAttribute("flash"),
-                    "flashType", ctx.consumeSessionAttribute("flashType")
+                    "flash", flash,
+                    "flashType", flashType
                 ));
             } catch (SQLException e) {
                 ctx.sessionAttribute("flash", "Ошибка при получении списка URL");
