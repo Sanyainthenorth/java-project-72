@@ -22,6 +22,8 @@ dependencies {
     implementation ("org.postgresql:postgresql:42.6.0")
     implementation("gg.jte:jte:3.2.0")
     implementation("io.javalin:javalin-rendering:6.6.0")
+    implementation("io.javalin:javalin-bundle:6.6.0")
+    testImplementation("org.assertj:assertj-core:3.27.3")
 }
 
 tasks.test {
