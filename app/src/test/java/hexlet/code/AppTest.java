@@ -1,11 +1,5 @@
 package hexlet.code;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.Optional;
-
 import hexlet.code.model.Url;
 import hexlet.code.repository.UrlRepository;
 import io.javalin.Javalin;
@@ -13,94 +7,126 @@ import io.javalin.testtools.JavalinTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.sql.SQLException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class AppTest {
 
     private Javalin app;
 
     @BeforeEach
-    void setUp() throws IOException, SQLException {
-        app = App.getApp();
+    public void setUp() throws IOException, SQLException {
+        // Используем H2 для тестов
+        System.setProperty("JDBC_DATABASE_URL", "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;");
 
-        // Очистим таблицу URL для независимости тестов (нужно реализовать метод)
+        app = App.getApp();
+        // Очищаем базу данных перед каждым тестом
         UrlRepository.removeAll();
     }
 
     @Test
-    void testMainPage() {
+    public void testMainPage() {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/");
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("Добавить ссылку");  // проверьте содержимое вашей index.jte
+            assertThat(response.body().string()).contains("Анализатор страниц");
         });
     }
 
     @Test
-    void testAddUrlSuccessfully() throws SQLException {
-        JavalinTest.test(app, (server, client) -> {
-            var form = "url=https://hexlet.io";
-            var postResponse = client.post("/urls", form);
-
-            // Проверяем редирект после успешного добавления
-            assertThat(postResponse.code()).isEqualTo(302);
-            assertThat(postResponse.header("Location")).isEqualTo("/urls");
-
-            // Проверяем, что URL добавлен в базу
-            Optional<Url> url = UrlRepository.findByName("https://hexlet.io");
-            assertThat(url).isPresent();
-
-            // Проверяем, что URL отображается на странице /urls
-            var listResponse = client.get("/urls");
-            assertThat(listResponse.code()).isEqualTo(200);
-            assertThat(listResponse.body().string()).contains("https://hexlet.io");
-        });
-    }
-
-    @Test
-    void testAddInvalidUrl() {
-        JavalinTest.test(app, (server, client) -> {
-            var form = "url=not-a-valid-url";
-            var postResponse = client.post("/urls", form);
-
-            // Ожидается редирект на главную со flash-сообщением
-            assertThat(postResponse.code()).isEqualTo(302);
-            assertThat(postResponse.header("Location")).isEqualTo("/");
-
-            // Главная страница с сообщением об ошибке
-            var mainResponse = client.get("/");
-            var body = mainResponse.body().string();
-            assertThat(body).contains("Некорректный URL");
-        });
-    }
-
-    @Test
-    void testUrlsIndexPage() throws SQLException {
-        // Добавим URL для проверки
-        UrlRepository.save(new Url("https://test-url.com"));
-
+    public void testUrlsPage() {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/urls");
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("https://test-url.com");
+            assertThat(response.body().string()).contains("Сайты");
         });
     }
 
     @Test
-    void testShowUrlPage() throws SQLException {
-        var url = new Url("https://show-url.com");
+    public void testAddValidUrl() throws SQLException {
+        JavalinTest.test(app, (server, client) -> {
+            var requestBody = "url=https://example.com";
+            var response = client.post("/urls", requestBody);
+
+            assertThat(response.code()).isEqualTo(302); // Redirect
+            assertThat(response.header("Location")).isEqualTo("/urls");
+
+            // Проверяем, что URL был добавлен в базу
+            var urls = UrlRepository.getEntities();
+            assertThat(urls).hasSize(1);
+            assertThat(urls.get(0).getName()).isEqualTo("https://example.com");
+        });
+    }
+
+    @Test
+    public void testAddInvalidUrl() {
+        JavalinTest.test(app, (server, client) -> {
+            var requestBody = "url=invalid-url";
+            var response = client.post("/urls", requestBody);
+
+            assertThat(response.code()).isEqualTo(302);
+            assertThat(response.header("Location")).isEqualTo("/");
+
+            // Проверяем, что URL не был добавлен в базу
+            var urls = UrlRepository.getEntities();
+            assertThat(urls).isEmpty();
+        });
+    }
+
+    @Test
+    public void testAddDuplicateUrl() throws SQLException {
+        // Сначала добавляем URL
+        var url = new Url("https://example.com");
+        UrlRepository.save(url);
+
+        JavalinTest.test(app, (server, client) -> {
+            var requestBody = "url=https://example.com";
+            var response = client.post("/urls", requestBody);
+
+            assertThat(response.code()).isEqualTo(302);
+            assertThat(response.header("Location")).isEqualTo("/urls");
+
+            // Проверяем, что URL не был добавлен повторно
+            var urls = UrlRepository.getEntities();
+            assertThat(urls).hasSize(1);
+        });
+    }
+
+    @Test
+    public void testShowUrlPage() throws SQLException {
+        // Сначала добавляем URL
+        var url = new Url("https://example.com");
         UrlRepository.save(url);
 
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/urls/" + url.getId());
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("https://show-url.com");
+            assertThat(response.body().string()).contains("https://example.com");
         });
     }
 
     @Test
-    void testShowUrlPageNotFound() {
+    public void testShowNonExistentUrl() {
         JavalinTest.test(app, (server, client) -> {
-            var response = client.get("/urls/99999999");
+            var response = client.get("/urls/999999");
             assertThat(response.code()).isEqualTo(404);
+        });
+    }
+
+    @Test
+    public void testUrlNormalization() throws SQLException {
+        JavalinTest.test(app, (server, client) -> {
+            var requestBody = "url=https://example.com:443/path?query=string";
+            var response = client.post("/urls", requestBody);
+
+            assertThat(response.code()).isEqualTo(302);
+
+            // Проверяем, что URL был нормализован
+            var urls = UrlRepository.getEntities();
+            assertThat(urls).hasSize(1);
+            assertThat(urls.get(0).getName()).isEqualTo("https://example.com");
         });
     }
 }

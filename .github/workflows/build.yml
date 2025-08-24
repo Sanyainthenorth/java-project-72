@@ -5,7 +5,8 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      JDBC_DATABASE_URL: jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;
     steps:
     - uses: actions/checkout@v3
     

@@ -33,6 +33,13 @@ public class App {
     }
 
     private static String getJdbcUrl() {
+        String jdbcUrl = System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
+
+        // Для тестов используем другую базу
+        if (jdbcUrl.contains("test")) {
+            return jdbcUrl;
+        }
+
         return System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
     }
 
