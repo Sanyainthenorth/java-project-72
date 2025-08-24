@@ -11,7 +11,6 @@ public class Url {
         this.name = name;
     }
 
-    // Геттеры и сеттеры
     public Long getId() {
         return id;
     }

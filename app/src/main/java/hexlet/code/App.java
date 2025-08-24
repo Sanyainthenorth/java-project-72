@@ -18,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Map;
@@ -34,17 +35,14 @@ public class App {
 
     private static String getJdbcUrl() {
         String jdbcUrl = System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
-
-        // Для тестов используем другую базу
-        if (jdbcUrl.contains("test")) {
-            return jdbcUrl;
-        }
-
-        return System.getenv().getOrDefault("JDBC_DATABASE_URL", "jdbc:h2:mem:project;DB_CLOSE_DELAY=-1;");
+        return jdbcUrl;
     }
 
     private static String readResourceFile(String fileName) throws IOException {
         var inputStream = App.class.getClassLoader().getResourceAsStream(fileName);
+        if (inputStream == null) {
+            throw new IOException("Resource file not found: " + fileName);
+        }
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             return reader.lines().collect(Collectors.joining("\n"));
         }
@@ -100,31 +98,44 @@ public class App {
 
         // Обработка добавления URL
         app.post("/urls", ctx -> {
-            var inputUrl = ctx.formParam("url");
-            URL parsedUrl;
+            String inputUrl = ctx.formParam("url");
+            if (inputUrl == null || inputUrl.trim().isEmpty()) {
+                ctx.sessionAttribute("flash", "URL не может быть пустым");
+                ctx.sessionAttribute("flashType", "danger");
+                ctx.redirect("/");
+                return;
+            }
 
+            String normalizedUrl;
             try {
-                // Парсим и нормализуем URL
-                var uri = new URI(inputUrl).toURL();
-                parsedUrl = new URL(uri.getProtocol(), uri.getHost(), uri.getPort(), "");
-            } catch (Exception e) {
+                var uri = new URI(inputUrl);
+                String protocol = uri.getScheme();
+                String host = uri.getHost();
+
+                if (protocol == null || host == null) {
+                    throw new IllegalArgumentException("Некорректный URL");
+                }
+
+                int port = uri.getPort();
+                if (port == -1 || (protocol.equals("http") && port == 80) || (protocol.equals("https") && port == 443)) {
+                    normalizedUrl = protocol + "://" + host;
+                } else {
+                    normalizedUrl = protocol + "://" + host + ":" + port;
+                }
+            } catch (Exception ex) {
                 ctx.sessionAttribute("flash", "Некорректный URL");
                 ctx.sessionAttribute("flashType", "danger");
                 ctx.redirect("/");
                 return;
             }
 
-            var normalizedUrl = parsedUrl.toString();
-
             try {
-                // Проверяем существование URL
                 var existingUrl = UrlRepository.findByName(normalizedUrl);
                 if (existingUrl.isPresent()) {
                     ctx.sessionAttribute("flash", "Страница уже существует");
                     ctx.sessionAttribute("flashType", "info");
                 } else {
-                    var url = new Url(normalizedUrl);
-                    UrlRepository.save(url);
+                    UrlRepository.save(new Url(normalizedUrl));
                     ctx.sessionAttribute("flash", "Страница успешно добавлена");
                     ctx.sessionAttribute("flashType", "success");
                 }
@@ -135,6 +146,7 @@ public class App {
                 ctx.redirect("/");
             }
         });
+
 
         // Список всех URL
         app.get("/urls", ctx -> {
@@ -157,18 +169,13 @@ public class App {
 
         // Конкретный URL
         app.get("/urls/{id}", ctx -> {
-            try {
-                var id = ctx.pathParamAsClass("id", Long.class).get();
-                var url = UrlRepository.find(id)
-                                       .orElseThrow(() -> new NotFoundResponse("URL не найден"));
+            var id = ctx.pathParamAsClass("id", Long.class).get();
+            var url = UrlRepository.find(id)
+                                   .orElseThrow(() -> new NotFoundResponse("URL не найден"));
 
-                ctx.render("urls/show.jte", model("url", url));
-            } catch (SQLException e) {
-                ctx.sessionAttribute("flash", "Ошибка при получении URL");
-                ctx.sessionAttribute("flashType", "danger");
-                ctx.redirect("/urls");
-            }
+            ctx.render("urls/show.jte", model("url", url));
         });
+
 
         return app;
     }
