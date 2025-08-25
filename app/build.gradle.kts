@@ -1,6 +1,7 @@
 plugins {
     id("java")
     application
+    jacoco
     id("org.sonarqube") version "4.4.1.3373"
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
@@ -10,6 +11,9 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+}
+jacoco {
+    toolVersion = "0.8.10"
 }
 
 dependencies {
@@ -31,6 +35,7 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
 }
 application {
     mainClass.set("hexlet.code.App")
@@ -40,11 +45,19 @@ sonar {
         property("sonar.projectKey", "Sanyainthenorth_java-project-72")
         property("sonar.organization", "sanyainthenorth")
         property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
     }
 }
 tasks.shadowJar {
     archiveBaseName.set("app")
     archiveClassifier.set("")
     archiveVersion.set("")
+}
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true) // чтобы SonarCloud видел отчет
+        html.required.set(true)
+    }
 }
 
