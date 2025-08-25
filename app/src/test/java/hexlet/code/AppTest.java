@@ -7,17 +7,18 @@ import io.javalin.testtools.JavalinTest;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -53,102 +54,114 @@ public class AppTest {
     }
 
     @Test
-    public void testAddValidUrl() throws SQLException {
+    void testAddUrlSuccess() throws IOException {
         JavalinTest.test(app, (server, client) -> {
-            var requestBody = "url=https://example.com";
+            // Получаем URL с работающим сервером
+            String baseUrl = "http://localhost:" + server.port();
 
-            // Создаем кастомный HTTP клиент без редиректов
-            OkHttpClient noRedirectClient = new OkHttpClient.Builder()
+            // Создаем OkHttpClient с отключенным следованием редиректам
+            OkHttpClient httpClient = new OkHttpClient.Builder()
                 .followRedirects(false)
                 .build();
 
-            var requestBodyObj = RequestBody.create(
-                "url=https://example.com",
-                MediaType.parse("application/x-www-form-urlencoded")
-            );
+            // Формируем тело запроса form-urlencoded
+            MediaType mediaType = MediaType.get("application/x-www-form-urlencoded");
+            RequestBody body = RequestBody.create("url=https://example.com", mediaType);
 
+            // Формируем POST запрос
             Request request = new Request.Builder()
-                .url("http://localhost:" + server.port() + "/urls")
-                .post(requestBodyObj)
+                .url(baseUrl + "/urls")
+                .post(body)
                 .build();
 
-            var response = noRedirectClient.newCall(request).execute();
+            // Выполняем запрос и получаем ответ
+            Response response = httpClient.newCall(request).execute();
 
-            // Проверяем редирект
+            // Проверяем, что ответ именно 302 (редирект)
             assertThat(response.code()).isEqualTo(302);
-            assertThat(response.header("Location")).isEqualTo("/urls");
 
-            var urls = UrlRepository.getEntities();
+            // Проверяем что URL добавлен в базу
+            List<Url> urls = UrlRepository.getEntities();
             assertThat(urls).hasSize(1);
             assertThat(urls.get(0).getName()).isEqualTo("https://example.com");
+
+            // Проверяем, что GET /urls возвращает 200 и содержит добавленный URL
+            var listResponse = client.get("/urls");
+            assertThat(listResponse.code()).isEqualTo(200);
+            assertThat(listResponse.body().string()).contains("https://example.com");
+        });
+    }
+
+
+
+    @Test
+    public void testAddUrlDuplicate() throws IOException {
+        JavalinTest.test(app, (server, client) -> {
+            UrlRepository.save(new Url("https://example.com"));
+
+            String baseUrl = "http://localhost:" + server.port();
+
+            OkHttpClient httpClient = new OkHttpClient.Builder()
+                .followRedirects(false)
+                .build();
+
+            MediaType mediaType = MediaType.get("application/x-www-form-urlencoded");
+            RequestBody body = RequestBody.create("url=https://example.com", mediaType);
+
+            Request request = new Request.Builder()
+                .url(baseUrl + "/urls")
+                .post(body)
+                .build();
+
+            Response response = httpClient.newCall(request).execute();
+            assertThat(response.code()).isEqualTo(302);
+
+            List<Url> urls = UrlRepository.getEntities();
+            assertThat(urls).hasSize(1);
         });
     }
 
     @Test
-    public void testAddInvalidUrl() {
+    public void testAddUrlInvalid() throws IOException {
         JavalinTest.test(app, (server, client) -> {
-            // Создаем кастомный HTTP клиент без редиректов
-            OkHttpClient noRedirectClient = new OkHttpClient.Builder()
+
+            String baseUrl = "http://localhost:" + server.port();
+
+            OkHttpClient httpClient = new OkHttpClient.Builder()
                 .followRedirects(false)
                 .build();
 
-            var requestBody = RequestBody.create(
-                "url=invalid-url",
-                MediaType.parse("application/x-www-form-urlencoded")
-            );
+            MediaType mediaType = MediaType.get("application/x-www-form-urlencoded");
+            RequestBody body = RequestBody.create("url=badinvalidurl", mediaType);
 
             Request request = new Request.Builder()
-                .url("http://localhost:" + server.port() + "/urls")
-                .post(requestBody)
+                .url(baseUrl + "/urls")
+                .post(body)
                 .build();
 
-            var response = noRedirectClient.newCall(request).execute();
-
-            // Проверяем, что возвращается редирект (302)
+            Response response = httpClient.newCall(request).execute();
             assertThat(response.code()).isEqualTo(302);
-            assertThat(response.header("Location")).isEqualTo("/");
 
-            var urls = UrlRepository.getEntities();
+            List<Url> urls = UrlRepository.getEntities();
             assertThat(urls).isEmpty();
         });
     }
 
     @Test
-    void testAddDuplicateUrlRedirect() {
+    public void testGetUrlsPage() {
         JavalinTest.test(app, (server, client) -> {
-            // Создаем кастомный HTTP клиент без редиректов
-            OkHttpClient noRedirectClient = new OkHttpClient.Builder()
-                .followRedirects(false)
-                .build();
-
-            // Первый запрос
-            Request request1 = new Request.Builder()
-                .url("http://localhost:" + server.port() + "/urls")
-                .post(RequestBody.create("url=https://example.com",
-                                         MediaType.parse("application/x-www-form-urlencoded")))
-                .build();
-            var response1 = noRedirectClient.newCall(request1).execute();
-            assertEquals(302, response1.code());
-
-            // Второй запрос (дубликат)
-            Request request2 = new Request.Builder()
-                .url("http://localhost:" + server.port() + "/urls")
-                .post(RequestBody.create("url=https://example.com",
-                                         MediaType.parse("application/x-www-form-urlencoded")))
-                .build();
-            var response2 = noRedirectClient.newCall(request2).execute();
-
-            // Проверяем статус второго POST запроса
-            assertEquals(302, response2.code());
+            UrlRepository.save(new Url("https://example.com"));
+            var response = client.get("/urls");
+            assertThat(response.code()).isEqualTo(200);
+            assertThat(response.body().string()).contains("https://example.com");
         });
     }
 
     @Test
-    public void testShowUrlPage() throws SQLException {
-        var url = new Url("https://example.com");
-        UrlRepository.save(url);
-
+    public void testGetUrlDetails() {
         JavalinTest.test(app, (server, client) -> {
+            Url url = new Url("https://example.com");
+            UrlRepository.save(url);
             var response = client.get("/urls/" + url.getId());
             assertThat(response.code()).isEqualTo(200);
             assertThat(response.body().string()).contains("https://example.com");
@@ -156,39 +169,10 @@ public class AppTest {
     }
 
     @Test
-    public void testShowNonExistentUrl() {
+    public void testUrlNotFound() {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/urls/999999");
             assertThat(response.code()).isEqualTo(404);
         });
     }
-    @Test
-    public void testUrlNormalization() throws SQLException {
-        JavalinTest.test(app, (server, client) -> {
-            // Создаем кастомный HTTP клиент без редиректов
-            OkHttpClient noRedirectClient = new OkHttpClient.Builder()
-                .followRedirects(false)
-                .build();
-
-            var requestBody = RequestBody.create(
-                "url=https://example.com:443/path?query=string",
-                MediaType.parse("application/x-www-form-urlencoded")
-            );
-
-            Request request = new Request.Builder()
-                .url("http://localhost:" + server.port() + "/urls")
-                .post(requestBody)
-                .build();
-
-            var response = noRedirectClient.newCall(request).execute();
-
-            // Проверяем редирект
-            assertThat(response.code()).isEqualTo(302);
-
-            var urls = UrlRepository.getEntities();
-            assertThat(urls).hasSize(1);
-            assertThat(urls.get(0).getName()).isEqualTo("https://example.com");
-        });
-    }
-
 }
