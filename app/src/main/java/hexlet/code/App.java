@@ -198,6 +198,7 @@ public class App {
         );
 
         // Конкретный URL
+        // Конкретный URL
         app.get(
             "/urls/{id}", ctx -> {
                 try {
@@ -211,9 +212,12 @@ public class App {
                     Url url = urlOptional.get();
                     List<UrlCheck> checks = UrlCheckRepository.findAllByUrlId(id);
 
-                    ctx.attribute("url", url);
-                    ctx.attribute("checks", checks);
-                    ctx.render("urls/show.jte");
+                    // ИСПРАВЛЕНО: передаем данные через модель
+                    var model = Map.of(
+                        "url", url,
+                        "checks", checks
+                    );
+                    ctx.render("urls/show.jte", model);
                 }
                 catch (SQLException e) {
                     ctx.sessionAttribute("flash", "Ошибка базы данных: " + e.getMessage());

@@ -40,7 +40,7 @@ public class AppTest {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/");
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("Добавить новый URL");
+            assertThat(response.body().string()).contains("Анализатор страниц");
         });
     }
 
@@ -49,7 +49,7 @@ public class AppTest {
         JavalinTest.test(app, (server, client) -> {
             var response = client.get("/urls");
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("Список URL");
+            assertThat(response.body().string()).contains("Сайты");
         });
     }
 
@@ -164,11 +164,11 @@ public class AppTest {
     @Test
     public void testGetUrlDetails() {
         JavalinTest.test(app, (server, client) -> {
-            Url url = new Url("https://example.com");
+            Url url = new Url("Пример: https://www.example.com");
             UrlRepository.save(url);
             var response = client.get("/urls/" + url.getId());
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("https://example.com");
+            assertThat(response.body().string()).contains("Пример: https://www.example.com");
         });
     }
 
