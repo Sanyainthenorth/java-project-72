@@ -151,9 +151,13 @@ public class AppTest {
     public void testGetUrlsPage() {
         JavalinTest.test(app, (server, client) -> {
             UrlRepository.save(new Url("https://example.com"));
+
             var response = client.get("/urls");
+
             assertThat(response.code()).isEqualTo(200);
-            assertThat(response.body().string()).contains("https://example.com");
+
+            String body = response.body().string();
+            assertThat(body).contains("https://example.com");
         });
     }
 
@@ -175,4 +179,5 @@ public class AppTest {
             assertThat(response.code()).isEqualTo(404);
         });
     }
+
 }

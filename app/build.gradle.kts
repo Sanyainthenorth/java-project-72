@@ -13,7 +13,7 @@ repositories {
     mavenCentral()
 }
 jacoco {
-    toolVersion = "0.8.10"
+    toolVersion = "0.8.12"
 }
 
 dependencies {
@@ -25,11 +25,16 @@ dependencies {
     implementation("gg.jte:jte:3.2.0")
     implementation("io.javalin:javalin-rendering:6.6.0")
     implementation("io.javalin:javalin-bundle:6.1.6")
+    implementation("com.konghq:unirest-java:3.14.5")
+    implementation ("com.squareup.okhttp3:okhttp:4.10.0")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("io.javalin:javalin-testtools:6.1.6")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
+    testImplementation("com.konghq:unirest-java:3.14.5")
+
 }
 
 
@@ -46,6 +51,7 @@ sonar {
         property("sonar.organization", "sanyainthenorth")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+        property("sonar.gradle.skipCompile", "true")
     }
 }
 tasks.shadowJar {
