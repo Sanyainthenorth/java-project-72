@@ -69,3 +69,4 @@ public class UrlCheck {
         this.createdAt = createdAt;
     }
 }
+

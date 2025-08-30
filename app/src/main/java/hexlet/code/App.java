@@ -101,8 +101,7 @@ public class App {
                     ctx.consumeSessionAttribute("flashType");
 
                     ctx.render("index.jte", model("page", page));
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     ctx.status(500).result("Error: " + e.getMessage());
                     throw e;
                 }
@@ -131,7 +130,8 @@ public class App {
                     }
 
                     int port = uri.getPort();
-                    if (port == -1 || (protocol.equals("http") && port == 80) ||
+                    if (port == -1
+                        || (protocol.equals("http") && port == 80) ||
                         (protocol.equals("https") && port == 443)) {
                         normalizedUrl = protocol + "://" + host;
                     } else {

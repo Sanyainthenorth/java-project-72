@@ -1,11 +1,10 @@
 package hexlet.code.repository;
 
 import hexlet.code.model.UrlCheck;
-
-import java.sql.*;
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 public class UrlCheckRepository extends BaseRepository {
 

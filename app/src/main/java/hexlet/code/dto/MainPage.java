@@ -1,8 +1,6 @@
 package hexlet.code.dto;
 
-import java.util.Map;
-
-public class MainPage {
+public final class MainPage {
     private String flash;
     private String flashType;
 
