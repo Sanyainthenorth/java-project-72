@@ -1,4 +1,8 @@
-@param hexlet.code.dto.UrlsPage page
+@import hexlet.code.dto.UrlsPage
+@import hexlet.code.model.Url
+@import java.time.format.DateTimeFormatter
+
+@param UrlsPage page
 
 <!DOCTYPE html>
 <html lang="ru">
@@ -37,7 +41,7 @@
             padding: 30px;
             margin-top: 30px;
         }
-        .page-title {
+        .section-title {
             font-weight: 600;
             margin-bottom: 25px;
             color: #333;
@@ -48,12 +52,23 @@
             font-weight: 600;
             color: #495057;
             background-color: #f8f9fa;
+            padding: 15px;
+        }
+        .table td {
+            padding: 15px;
+            vertical-align: middle;
         }
         .footer {
             text-align: center;
             margin-top: 40px;
             color: #6c757d;
             font-size: 0.9rem;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
         }
     </style>
 </head>
@@ -77,42 +92,48 @@
         @endif
 
         <div class="content-section">
-            <h1 class="page-title">Сайты</h1>
+            <h1 class="section-title">Сайты</h1>
 
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Имя</th>
-                        <th>Последняя проверка</th>
-                        <th>Код ответа</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (page.getUrls() != null && !page.getUrls().isEmpty())
+            @if (page.getUrls() != null && !page.getUrls().isEmpty())
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Имя</th>
+                            <th>Последняя проверка</th>
+                            <th>Код ответа</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         @for (var url : page.getUrls())
                         <tr>
                             <td>${url.getId()}</td>
-                            <td><a href="/urls/${url.getId()}">${url.getName()}</a></td>
+                            <td><a href="/urls/${url.getId()}" class="text-decoration-none">${url.getName()}</a></td>
                             <td>
                                 @if (page.getLatestChecks() != null && page.getLatestChecks().containsKey(url.getId()))
-                                    ${page.getLatestChecks().get(url.getId()).getCreatedAt().toString()}
+                                    ${page.getLatestChecks().get(url.getId()).getCreatedAt().toLocalDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}
+                                @else
+                                    <span class="text-muted">—</span>
                                 @endif
                             </td>
                             <td>
                                 @if (page.getLatestChecks() != null && page.getLatestChecks().containsKey(url.getId()))
                                     ${page.getLatestChecks().get(url.getId()).getStatusCode()}
+                                @else
+                                    <span class="text-muted">—</span>
                                 @endif
                             </td>
                         </tr>
                         @endfor
-                    @else
-                        <tr>
-                            <td colspan="4" class="text-center">Пока нет добавленных сайтов</td>
-                        </tr>
-                    @endif
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="no-data">
+                <p>Пока нет добавленных сайтов</p>
+            </div>
+            @endif
         </div>
     </div>
 

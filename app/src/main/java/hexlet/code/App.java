@@ -20,21 +20,20 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.net.URL;
 import kong.unirest.Unirest;
 import kong.unirest.HttpResponse;
 import kong.unirest.UnirestException;
 import java.sql.Timestamp;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import static io.javalin.rendering.template.TemplateUtil.model;
 
@@ -198,7 +197,6 @@ public class App {
         );
 
         // Конкретный URL
-        // Конкретный URL
         app.get(
             "/urls/{id}", ctx -> {
                 try {
@@ -212,7 +210,6 @@ public class App {
                     Url url = urlOptional.get();
                     List<UrlCheck> checks = UrlCheckRepository.findAllByUrlId(id);
 
-                    // ИСПРАВЛЕНО: передаем данные через модель
                     var model = Map.of(
                         "url", url,
                         "checks", checks
@@ -243,31 +240,58 @@ public class App {
                                                                .connectTimeout(5000)
                                                                .asString();
 
+                        int statusCode = response.getStatus();
                         String body = response.getBody();
-                        String title = extractTagContent(body, "title");
-                        String h1 = extractTagContent(body, "h1");
-                        String description = extractMetaDescription(body);
+
+                        // Парсим HTML с помощью Jsoup
+                        Document doc = Jsoup.parse(body);
+
+                        String title = "";
+                        String h1 = "";
+                        String description = "";
+
+                        // Извлекаем title
+                        if (doc.title() != null && !doc.title().isEmpty()) {
+                            title = doc.title();
+                        }
+
+                        // Извлекаем h1
+                        Element h1Element = doc.selectFirst("h1");
+                        if (h1Element != null) {
+                            h1 = h1Element.text().trim();
+                        }
+
+                        // Извлекаем meta description
+                        Element metaDescription = doc.selectFirst("meta[name=description]");
+                        if (metaDescription != null) {
+                            description = metaDescription.attr("content").trim();
+                        }
 
                         UrlCheck urlCheck = new UrlCheck();
                         urlCheck.setUrlId(id);
-                        urlCheck.setStatusCode(response.getStatus());
+                        urlCheck.setStatusCode(statusCode);
                         urlCheck.setTitle(title);
                         urlCheck.setH1(h1);
                         urlCheck.setDescription(description);
                         urlCheck.setCreatedAt(new Timestamp(System.currentTimeMillis()));
 
-                        // Сохраняем UrlCheck только если HTTP статус 200
-                        if (response.getStatus() == 200) {
-                            UrlCheckRepository.save(urlCheck);
+                        // Сохраняем UrlCheck
+                        UrlCheckRepository.save(urlCheck);
+
+                        if (statusCode == 200) {
                             ctx.sessionAttribute("flash", "Страница успешно проверена");
                             ctx.sessionAttribute("flashType", "success");
                         } else {
-                            ctx.sessionAttribute("flash", "Не удалось проверить страницу: получен статус " + response.getStatus());
-                            ctx.sessionAttribute("flashType", "danger");
+                            ctx.sessionAttribute("flash", "Страница проверена, но получен статус " + statusCode);
+                            ctx.sessionAttribute("flashType", "warning");
                         }
                     }
                     catch (UnirestException e) {
                         ctx.sessionAttribute("flash", "Невозможно проверить страницу: " + e.getMessage());
+                        ctx.sessionAttribute("flashType", "danger");
+                    }
+                    catch (Exception e) {
+                        ctx.sessionAttribute("flash", "Ошибка при обработке страницы: " + e.getMessage());
                         ctx.sessionAttribute("flashType", "danger");
                     }
 
@@ -283,27 +307,6 @@ public class App {
 
 
         return app;
-    }
-
-    // Вспомогательные методы для простого парсинга html без Jsoup
-    private static String extractTagContent(String html, String tag) {
-        Pattern pattern = Pattern.compile("<" + tag + ".*?>(.*?)</" + tag + ">", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(html);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        return "";
-    }
-
-    private static String extractMetaDescription(String html) {
-        Pattern pattern = Pattern.compile(
-            "<meta\\s+name=['\"]description['\"]\\s+content=['\"](.*?)['\"][^>]*>",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(html);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        return "";
     }
 
 }

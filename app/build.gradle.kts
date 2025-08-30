@@ -27,6 +27,7 @@ dependencies {
     implementation("io.javalin:javalin-bundle:6.1.6")
     implementation("com.konghq:unirest-java:3.14.5")
     implementation ("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation ("org.jsoup:jsoup:1.21.2")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
