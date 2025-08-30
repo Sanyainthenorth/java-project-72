@@ -241,57 +241,47 @@ public class App {
                                                                .asString();
 
                         int statusCode = response.getStatus();
-                        String body = response.getBody();
 
-                        // Парсим HTML с помощью Jsoup
-                        Document doc = Jsoup.parse(body);
-
-                        String title = "";
-                        String h1 = "";
-                        String description = "";
-
-                        // Извлекаем title
-                        if (doc.title() != null && !doc.title().isEmpty()) {
-                            title = doc.title();
-                        }
-
-                        // Извлекаем h1
-                        Element h1Element = doc.selectFirst("h1");
-                        if (h1Element != null) {
-                            h1 = h1Element.text().trim();
-                        }
-
-                        // Извлекаем meta description
-                        Element metaDescription = doc.selectFirst("meta[name=description]");
-                        if (metaDescription != null) {
-                            description = metaDescription.attr("content").trim();
-                        }
-
-                        UrlCheck urlCheck = new UrlCheck();
-                        urlCheck.setUrlId(id);
-                        urlCheck.setStatusCode(statusCode);
-                        urlCheck.setTitle(title);
-                        urlCheck.setH1(h1);
-                        urlCheck.setDescription(description);
-                        urlCheck.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-
-                        // Сохраняем UrlCheck
-                        UrlCheckRepository.save(urlCheck);
-
+                        // СОХРАНЯЕМ ТОЛЬКО ПРИ УСПЕШНОМ СТАТУСЕ 200
                         if (statusCode == 200) {
+                            String body = response.getBody();
+                            Document doc = Jsoup.parse(body);
+
+                            String title = doc.title();
+                            String h1 = "";
+                            String description = "";
+
+                            Element h1Element = doc.selectFirst("h1");
+                            if (h1Element != null) {
+                                h1 = h1Element.text().trim();
+                            }
+
+                            Element metaDescription = doc.selectFirst("meta[name=description]");
+                            if (metaDescription != null) {
+                                description = metaDescription.attr("content").trim();
+                            }
+
+                            UrlCheck urlCheck = new UrlCheck();
+                            urlCheck.setUrlId(id);
+                            urlCheck.setStatusCode(statusCode);
+                            urlCheck.setTitle(title);
+                            urlCheck.setH1(h1);
+                            urlCheck.setDescription(description);
+                            urlCheck.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+
+                            UrlCheckRepository.save(urlCheck);
+
                             ctx.sessionAttribute("flash", "Страница успешно проверена");
                             ctx.sessionAttribute("flashType", "success");
                         } else {
-                            ctx.sessionAttribute("flash", "Страница проверена, но получен статус " + statusCode);
-                            ctx.sessionAttribute("flashType", "warning");
+                            // НЕ СОХРАНЯЕМ UrlCheck ПРИ ОШИБКЕ
+                            ctx.sessionAttribute("flash", "Не удалось проверить страницу: получен статус " + statusCode);
+                            ctx.sessionAttribute("flashType", "danger");
                         }
                     }
                     catch (UnirestException e) {
+                        // НЕ СОХРАНЯЕМ UrlCheck ПРИ ОШИБКЕ СЕТИ
                         ctx.sessionAttribute("flash", "Невозможно проверить страницу: " + e.getMessage());
-                        ctx.sessionAttribute("flashType", "danger");
-                    }
-                    catch (Exception e) {
-                        ctx.sessionAttribute("flash", "Ошибка при обработке страницы: " + e.getMessage());
                         ctx.sessionAttribute("flashType", "danger");
                     }
 
