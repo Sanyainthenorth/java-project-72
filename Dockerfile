@@ -1,9 +1,19 @@
-FROM gradle:8.12.1-jdk21
-
+# Стадия 1: Сборка
+FROM gradle:8.12.1-jdk21 AS build
 WORKDIR /app
-
-COPY /app .
-
+COPY app/ .
 RUN ["./gradlew", "clean", "build"]
 
-CMD ["./gradlew", "run"]
+# Стадия 2: Production
+FROM gradle:8.12.1-jdk21
+WORKDIR /app
+COPY --from=build /app/build/libs/app.jar app.jar
+
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=90.0", \
+    "-XX:InitialRAMPercentage=50.0", \
+    "-XX:+UseG1GC", \
+    "-XX:MaxGCPauseMillis=200", \
+    "-XX:+HeapDumpOnOutOfMemoryError", \
+    "-jar", "app.jar"]
