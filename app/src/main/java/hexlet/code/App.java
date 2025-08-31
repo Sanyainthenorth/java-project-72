@@ -57,14 +57,15 @@ public class App {
     public static Javalin getApp() throws IOException, SQLException {
         var hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(getJdbcUrl());
-        try (var dataSource = new HikariDataSource(hikariConfig)) {
-            var sql = readResourceFile("schema.sql");
+        var dataSource = new HikariDataSource(hikariConfig); // ← без try-with-resources
 
-            try (var connection = dataSource.getConnection();
-                 var statement = connection.createStatement()) {
-                statement.execute(sql);
-            }
-            BaseRepository.dataSource = dataSource;
+        try (var connection = dataSource.getConnection();
+             var statement = connection.createStatement()) {
+            var sql = readResourceFile("schema.sql");
+            statement.execute(sql);
+        }
+
+        BaseRepository.dataSource = dataSource;
 
             var app = Javalin.create(config -> {
                 config.bundledPlugins.enableDevLogging();
@@ -92,6 +93,6 @@ public class App {
 
             return app;
         }
-    }
+
 }
 
