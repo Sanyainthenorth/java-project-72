@@ -67,32 +67,32 @@ public class App {
 
         BaseRepository.dataSource = dataSource;
 
-            var app = Javalin.create(config -> {
-                config.bundledPlugins.enableDevLogging();
-                config.fileRenderer(new JavalinJte(createTemplateEngine()));
-            });
+        var app = Javalin.create(config -> {
+            config.bundledPlugins.enableDevLogging();
+            config.fileRenderer(new JavalinJte(createTemplateEngine()));
+        });
 
-            app.before(ctx -> {
-                ctx.contentType("text/html; charset=utf-8");
-            });
+        app.before(ctx -> {
+            ctx.contentType("text/html; charset=utf-8");
+        });
 
-            // Главная страница
-            app.get(rootPath(), MainController::index);
+        // Главная страница
+        app.get(rootPath(), MainController::index);
 
-            // Обработка добавления URL
-            app.post(urlsPath(), UrlController::create);
+        // Обработка добавления URL
+        app.post(urlsPath(), UrlController::create);
 
-            // Список всех URL
-            app.get(urlsPath(), UrlController::index);
+        // Список всех URL
+        app.get(urlsPath(), UrlController::index);
 
-            // Конкретный URL
-            app.get(urlPath("{id}"), UrlController::show);
+        // Конкретный URL
+        app.get(urlPath("{id}"), UrlController::show);
 
-            // Проверка URL
-            app.post(urlCheckPath("{id}"), UrlController::check);
+        // Проверка URL
+        app.post(urlCheckPath("{id}"), UrlController::check);
 
-            return app;
-        }
+        return app;
+    }
 
 }
 
