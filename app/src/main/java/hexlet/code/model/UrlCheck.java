@@ -2,7 +2,7 @@ package hexlet.code.model;
 
 import java.sql.Timestamp;
 
-public class UrlCheck {
+public final class UrlCheck {
     private Long id;
     private Integer statusCode;
     private String title;
@@ -10,6 +10,7 @@ public class UrlCheck {
     private String description;
     private Long urlId;
     private Timestamp createdAt;
+
     public UrlCheck() {
     }
 

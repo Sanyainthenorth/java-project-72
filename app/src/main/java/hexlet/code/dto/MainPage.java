@@ -4,7 +4,8 @@ public final class MainPage {
     private String flash;
     private String flashType;
 
-    public MainPage() {}
+    public MainPage() {
+    }
 
     public MainPage(String flash, String flashType) {
         this.flash = flash;

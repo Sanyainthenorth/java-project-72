@@ -1,6 +1,7 @@
 package hexlet.code.repository;
 
 import hexlet.code.model.UrlCheck;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +66,7 @@ public class UrlCheckRepository extends BaseRepository {
             return Optional.empty();
         }
     }
+
     public static void removeAll() throws SQLException {
         String sql = "DELETE FROM url_checks";
         try (var conn = dataSource.getConnection();

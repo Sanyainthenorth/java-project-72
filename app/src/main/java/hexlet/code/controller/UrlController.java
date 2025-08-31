@@ -88,7 +88,8 @@ public class UrlController {
             } else {
                 normalizedUrl = protocol + "://" + host + ":" + port;
             }
-        } catch (Exception ex) {
+        }
+        catch (Exception ex) {
             ctx.sessionAttribute("flash", "Некорректный URL");
             ctx.sessionAttribute("flashType", "danger");
             ctx.redirect("/");
@@ -106,7 +107,8 @@ public class UrlController {
                 ctx.sessionAttribute("flashType", "success");
             }
             ctx.redirect("/urls");
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             ctx.sessionAttribute("flash", "Ошибка при работе с базой данных");
             ctx.sessionAttribute("flashType", "danger");
             ctx.redirect("/");
@@ -164,7 +166,8 @@ public class UrlController {
                 ctx.sessionAttribute("flash", "Не удалось проверить страницу: получен статус " + statusCode);
                 ctx.sessionAttribute("flashType", "danger");
             }
-        } catch (UnirestException e) {
+        }
+        catch (UnirestException e) {
             ctx.sessionAttribute("flash", "Невозможно проверить страницу: " + e.getMessage());
             ctx.sessionAttribute("flashType", "danger");
         }

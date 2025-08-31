@@ -79,7 +79,8 @@ public class UrlRepository extends BaseRepository {
         try (var conn = dataSource.getConnection();
              var stmt = conn.createStatement()) {
             stmt.execute("ALTER TABLE urls ALTER COLUMN id RESTART WITH 1");
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             // Игнорируем, если sequence не существует (например, в PostgreSQL)
         }
     }

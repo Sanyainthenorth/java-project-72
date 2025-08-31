@@ -18,7 +18,10 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 
-import static hexlet.code.NamedRoutes.*;
+import static hexlet.code.NamedRoutes.rootPath;
+import static hexlet.code.NamedRoutes.urlCheckPath;
+import static hexlet.code.NamedRoutes.urlPath;
+import static hexlet.code.NamedRoutes.urlsPath;
 
 public class App {
 
