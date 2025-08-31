@@ -57,40 +57,41 @@ public class App {
     public static Javalin getApp() throws IOException, SQLException {
         var hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(getJdbcUrl());
-        var dataSource = new HikariDataSource(hikariConfig);
-        var sql = readResourceFile("schema.sql");
+        try (var dataSource = new HikariDataSource(hikariConfig)) {
+            var sql = readResourceFile("schema.sql");
 
-        try (var connection = dataSource.getConnection();
-             var statement = connection.createStatement()) {
-            statement.execute(sql);
+            try (var connection = dataSource.getConnection();
+                 var statement = connection.createStatement()) {
+                statement.execute(sql);
+            }
+            BaseRepository.dataSource = dataSource;
+
+            var app = Javalin.create(config -> {
+                config.bundledPlugins.enableDevLogging();
+                config.fileRenderer(new JavalinJte(createTemplateEngine()));
+            });
+
+            app.before(ctx -> {
+                ctx.contentType("text/html; charset=utf-8");
+            });
+
+            // Главная страница
+            app.get(rootPath(), MainController::index);
+
+            // Обработка добавления URL
+            app.post(urlsPath(), UrlController::create);
+
+            // Список всех URL
+            app.get(urlsPath(), UrlController::index);
+
+            // Конкретный URL
+            app.get(urlPath("{id}"), UrlController::show);
+
+            // Проверка URL
+            app.post(urlCheckPath("{id}"), UrlController::check);
+
+            return app;
         }
-        BaseRepository.dataSource = dataSource;
-
-        var app = Javalin.create(config -> {
-            config.bundledPlugins.enableDevLogging();
-            config.fileRenderer(new JavalinJte(createTemplateEngine()));
-        });
-
-        app.before(ctx -> {
-            ctx.contentType("text/html; charset=utf-8");
-        });
-
-        // Главная страница
-        app.get(rootPath(), MainController::index);
-
-        // Обработка добавления URL
-        app.post(urlsPath(), UrlController::create);
-
-        // Список всех URL
-        app.get(urlsPath(), UrlController::index);
-
-        // Конкретный URL
-        app.get(urlPath("{id}"), UrlController::show);
-
-        // Проверка URL
-        app.post(urlCheckPath("{id}"), UrlController::check);
-
-        return app;
     }
 }
 
