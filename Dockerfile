@@ -7,7 +7,7 @@ RUN ["./gradlew", "clean", "build"]
 # Стадия 2: Production
 FROM gradle:8.12.1-jdk21
 WORKDIR /app
-COPY --from=build /app/build/libs/app-1.0-SNAPSHOT.jar app.jar
+COPY --from=build /app/build/libs/app.jar app.jar
 
 ENTRYPOINT ["java", \
     "-XX:+UseContainerSupport", \
