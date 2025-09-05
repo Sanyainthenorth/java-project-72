@@ -2,14 +2,16 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-COPY gradle gradle
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
-COPY gradlew .
+# Копируем файлы сборки в текущую директорию (/app)
+COPY app/build.gradle.kts .
+COPY app/settings.gradle.kts .
+COPY app/gradlew .
+COPY app/gradle/ gradle/
 
 RUN ./gradlew --no-daemon dependencies
 
-COPY src src
+# Копируем исходный код из app/src в /app/src
+COPY app/src/ src/
 
 RUN ./gradlew --no-daemon build
 
