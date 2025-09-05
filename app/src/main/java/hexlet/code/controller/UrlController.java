@@ -15,6 +15,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.HashMap;
@@ -30,11 +31,7 @@ public class UrlController {
         var urls = UrlRepository.getEntities();
         var page = new UrlsPage(urls);
 
-        Map<Long, UrlCheck> latestChecks = new HashMap<>();
-        for (Url url : urls) {
-            Optional<UrlCheck> check = UrlCheckRepository.findLatestCheckByUrlId(url.getId());
-            check.ifPresent(urlCheck -> latestChecks.put(url.getId(), urlCheck));
-        }
+        Map<Long, UrlCheck> latestChecks = UrlCheckRepository.findLatestChecksForAllUrls();
         page.setLatestChecks(latestChecks);
 
         page.setFlash(ctx.consumeSessionAttribute("flash"));
@@ -72,22 +69,7 @@ public class UrlController {
 
         String normalizedUrl;
         try {
-            var uri = new URI(inputUrl);
-            String protocol = uri.getScheme();
-            String host = uri.getHost();
-
-            if (protocol == null || host == null) {
-                throw new IllegalArgumentException("Некорректный URL");
-            }
-
-            int port = uri.getPort();
-            if (port == -1
-                || (protocol.equals("http") && port == 80)
-                || (protocol.equals("https") && port == 443)) {
-                normalizedUrl = protocol + "://" + host;
-            } else {
-                normalizedUrl = protocol + "://" + host + ":" + port;
-            }
+            normalizedUrl = normalizeUrl(inputUrl);
         } catch (Exception ex) {
             ctx.sessionAttribute("flash", "Некорректный URL");
             ctx.sessionAttribute("flashType", "danger");
@@ -170,5 +152,27 @@ public class UrlController {
         }
 
         ctx.redirect("/urls/" + id);
+    }
+    private static String normalizeUrl(String inputUrl) {
+        try {
+            var uri = new URI(inputUrl);
+            String protocol = uri.getScheme();
+            String host = uri.getHost();
+
+            if (protocol == null || host == null) {
+                throw new IllegalArgumentException("Некорректный URL");
+            }
+
+            int port = uri.getPort();
+            if (port == -1
+                || (protocol.equals("http") && port == 80)
+                || (protocol.equals("https") && port == 443)) {
+                return protocol + "://" + host;
+            } else {
+                return protocol + "://" + host + ":" + port;
+            }
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Некорректный URL: " + e.getMessage());
+        }
     }
 }

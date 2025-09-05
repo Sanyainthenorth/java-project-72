@@ -6,6 +6,9 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.sql.ResultSet;
 
 public class UrlCheckRepository extends BaseRepository {
 
@@ -32,15 +35,7 @@ public class UrlCheckRepository extends BaseRepository {
             var resultSet = stmt.executeQuery();
             var urlChecks = new ArrayList<UrlCheck>();
             while (resultSet.next()) {
-                var urlCheck = new UrlCheck();
-                urlCheck.setId(resultSet.getLong("id"));
-                urlCheck.setUrlId(resultSet.getLong("url_id"));
-                urlCheck.setStatusCode(resultSet.getInt("status_code"));
-                urlCheck.setTitle(resultSet.getString("title"));
-                urlCheck.setH1(resultSet.getString("h1"));
-                urlCheck.setDescription(resultSet.getString("description"));
-                urlCheck.setCreatedAt(resultSet.getTimestamp("created_at"));
-                urlChecks.add(urlCheck);
+                urlChecks.add(extractUrlCheck(resultSet));
             }
             return urlChecks;
         }
@@ -53,17 +48,31 @@ public class UrlCheckRepository extends BaseRepository {
             stmt.setLong(1, urlId);
             var resultSet = stmt.executeQuery();
             if (resultSet.next()) {
-                var urlCheck = new UrlCheck();
-                urlCheck.setId(resultSet.getLong("id"));
-                urlCheck.setUrlId(resultSet.getLong("url_id"));
-                urlCheck.setStatusCode(resultSet.getInt("status_code"));
-                urlCheck.setTitle(resultSet.getString("title"));
-                urlCheck.setH1(resultSet.getString("h1"));
-                urlCheck.setDescription(resultSet.getString("description"));
-                urlCheck.setCreatedAt(resultSet.getTimestamp("created_at"));
-                return Optional.of(urlCheck);
+                return Optional.of(extractUrlCheck(resultSet));
             }
             return Optional.empty();
+        }
+    }
+
+    public static Map<Long, UrlCheck> findLatestChecksForAllUrls() throws SQLException {
+        String sql = """
+            SELECT DISTINCT ON (url_id) *
+            FROM url_checks
+            ORDER BY url_id, created_at DESC
+            """;
+
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+
+            var resultSet = stmt.executeQuery();
+            var latestChecks = new HashMap<Long, UrlCheck>();
+
+            while (resultSet.next()) {
+                UrlCheck urlCheck = extractUrlCheck(resultSet);
+                latestChecks.put(urlCheck.getUrlId(), urlCheck);
+            }
+
+            return latestChecks;
         }
     }
 
@@ -74,6 +83,17 @@ public class UrlCheckRepository extends BaseRepository {
             stmt.executeUpdate(sql);
         }
     }
-}
 
+    private static UrlCheck extractUrlCheck(ResultSet resultSet) throws SQLException {
+        var urlCheck = new UrlCheck();
+        urlCheck.setId(resultSet.getLong("id"));
+        urlCheck.setUrlId(resultSet.getLong("url_id"));
+        urlCheck.setStatusCode(resultSet.getInt("status_code"));
+        urlCheck.setTitle(resultSet.getString("title"));
+        urlCheck.setH1(resultSet.getString("h1"));
+        urlCheck.setDescription(resultSet.getString("description"));
+        urlCheck.setCreatedAt(resultSet.getTimestamp("created_at"));
+        return urlCheck;
+    }
+}
 
