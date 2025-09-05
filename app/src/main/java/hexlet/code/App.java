@@ -50,14 +50,28 @@ public class App {
     }
 
     public static void main(String[] args) throws IOException, SQLException {
+        // Явная регистрация драйвера PostgreSQL
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("PostgreSQL Driver not found", e);
+        }
+
         var app = getApp();
         app.start(getPort());
     }
 
     public static Javalin getApp() throws IOException, SQLException {
         var hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(getJdbcUrl());
-        var dataSource = new HikariDataSource(hikariConfig); // ← без try-with-resources
+        String jdbcUrl = getJdbcUrl();
+        hikariConfig.setJdbcUrl(jdbcUrl);
+
+        // Для PostgreSQL используем DataSourceClassName для лучшей совместимости
+        if (jdbcUrl.contains("postgresql")) {
+            hikariConfig.setDataSourceClassName("org.postgresql.ds.PGSimpleDataSource");
+        }
+
+        var dataSource = new HikariDataSource(hikariConfig);
 
         try (var connection = dataSource.getConnection();
              var statement = connection.createStatement()) {
@@ -93,6 +107,5 @@ public class App {
 
         return app;
     }
-
 }
 

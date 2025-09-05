@@ -60,6 +60,7 @@ tasks.shadowJar {
     archiveBaseName.set("app")
     archiveClassifier.set("")
     archiveVersion.set("")
+    mergeServiceFiles()
 }
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
