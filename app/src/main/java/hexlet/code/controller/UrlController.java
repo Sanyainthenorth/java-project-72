@@ -153,26 +153,22 @@ public class UrlController {
         ctx.redirect("/urls/" + id);
     }
 
-    private static String normalizeUrl(String inputUrl) {
-        try {
-            var uri = new URI(inputUrl);
-            String protocol = uri.getScheme();
-            String host = uri.getHost();
+    private static String normalizeUrl(String inputUrl) throws URISyntaxException {
+        var uri = new URI(inputUrl);
+        String protocol = uri.getScheme();
+        String host = uri.getHost();
 
-            if (protocol == null || host == null) {
-                throw new IllegalArgumentException("Некорректный URL");
-            }
+        if (protocol == null || host == null) {
+            throw new IllegalArgumentException("Некорректный URL");
+        }
 
-            int port = uri.getPort();
-            if (port == -1
-                || (protocol.equals("http") && port == 80)
-                || (protocol.equals("https") && port == 443)) {
-                return protocol + "://" + host;
-            } else {
-                return protocol + "://" + host + ":" + port;
-            }
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Некорректный URL: " + e.getMessage());
+        int port = uri.getPort();
+        if (port == -1
+            || (protocol.equals("http") && port == 80)
+            || (protocol.equals("https") && port == 443)) {
+            return protocol + "://" + host;
+        } else {
+            return protocol + "://" + host + ":" + port;
         }
     }
 }
